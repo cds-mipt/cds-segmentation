@@ -20,7 +20,7 @@ n_epochs = 30
 batch_size = 1
 train_sample_len = 1965
 #test_sample_len = 840
-test_sample_len = 187
+test_sample_len = 2
 train_steps = train_sample_len//batch_size
 test_steps = test_sample_len//batch_size
 learning_rate = 1e-4
@@ -36,14 +36,14 @@ project_dir = os.path.dirname(current_dir)
 
 train_path = current_dir+'/dataset/augmented_multiclass_dataset/train'
 val_path = current_dir+'/dataset/augmented_multiclass_dataset/test'
-#test_path = current_dir+'/dataset/augmented_multiclass_dataset/test/two_images'
-test_path = "D:/Datasets/NKBVS/mfti_data/2019-01-31-15-53-26_kia_velo_gps_time/stereo/left/image_raw/converted"
+test_path = two_images
+#test_path = "D:/Datasets/NKBVS/mfti_data/2019-01-31-15-53-26_kia_velo_gps_time/stereo/left/image_raw/converted"
 #test_path = "D:/Projects/nkbvs_segmentation/dataset/resized_source"
 #test_path = "D:/Projects/nkbvs_segmentation/dataset/augmented_multiclass_dataset/train/color"
-test_path = "C:/Data/resized_source"
+#test_path = "C:/Data/resized_source"
 
 #model_path = current_dir+'/models/unet2019-11-02-09-22-38.21-tloss-0.1277-tdice-0.8723-vdice-0.7350.hdf5' #512
-model_path = current_dir+'/models/unet2019-11-02-15-04-52.14-tloss-0.2767-tdice-0.7233-vdice-0.7085.hdf5'
+model_path = 'unet2019-11-02-15-04-52.14-tloss-0.2767-tdice-0.7233-vdice-0.7085.hdf5'
 
 
 
