@@ -11,6 +11,7 @@ from BackgroundParser import SourcePreparation
 
 train_flag = False
 tune_flag = False
+is_export = False
 
 image_width = 640
 image_height = 384
@@ -19,8 +20,8 @@ image_height = 384
 n_epochs = 30
 batch_size = 1
 train_sample_len = 1965
-#test_sample_len = 840
-test_sample_len = 2
+test_sample_len = 840
+#test_sample_len = 2
 train_steps = train_sample_len//batch_size
 test_steps = test_sample_len//batch_size
 learning_rate = 1e-4
@@ -36,15 +37,24 @@ project_dir = os.path.dirname(current_dir)
 
 train_path = current_dir+'/dataset/augmented_multiclass_dataset/train'
 val_path = current_dir+'/dataset/augmented_multiclass_dataset/test'
-test_path = two_images
-#test_path = "D:/Datasets/NKBVS/mfti_data/2019-01-31-15-53-26_kia_velo_gps_time/stereo/left/image_raw/converted"
+result_path = current_dir+"/dataset/results_multiclass_ct2_2"
+
+# train_path = current_dir+'/dataset/augmented_markup_dataset/train'
+# val_path = current_dir+'/dataset/augmented_markup_dataset/test'
+# result_path = current_dir+"/dataset/results_multiclass_mkp1"
+
+#test_path = current_dir+'/dataset/augmented_multiclass_dataset/test/two_images'
+
+test_path = "D:/Projects/nkbvs_segmentation/dataset/augmented_markup_dataset/train/color"
+#test_path = "D:/Datasets/NKBVS/mfti_data/2019-01-31-15-53-26_kia_velo_gps_time/stereo/left/image_raw/converted-500"
 #test_path = "D:/Projects/nkbvs_segmentation/dataset/resized_source"
 #test_path = "D:/Projects/nkbvs_segmentation/dataset/augmented_multiclass_dataset/train/color"
 #test_path = "C:/Data/resized_source"
 
 #model_path = current_dir+'/models/unet2019-11-02-09-22-38.21-tloss-0.1277-tdice-0.8723-vdice-0.7350.hdf5' #512
-model_path = 'unet2019-11-02-15-04-52.14-tloss-0.2767-tdice-0.7233-vdice-0.7085.hdf5'
-
+#model_path = current_dir+'/models/unet2019-11-02-15-04-52.14-tloss-0.2767-tdice-0.7233-vdice-0.7085.hdf5'
+#model_path = current_dir+'/models/unet2019-11-03-10-09-40.17-tloss-0.2772-tdice-0.7228-vdice-0.7057.hdf5'
+model_path = current_dir+'/models/unet2019-11-03-13-53-42.06-tloss-0.4144-tdice-0.5856-vdice-0.4698.hdf5'
 
 
 timestr = time.strftime("%Y-%m-%d-%H-%M-%S")
@@ -56,13 +66,14 @@ with open(log_filename, "a") as log_file:
     log_file.write("Val path: "+ val_path +"\n")
 
 
-data_gen_args = dict(rotation_range=0.2,
-                    width_shift_range=0.05,
-                    height_shift_range=0.05,
-                    shear_range=0.05,
-                    zoom_range=0.05,
-                    horizontal_flip=True,
-                    fill_mode='nearest')
+# data_gen_args = dict(rotation_range=0.2,
+#                     width_shift_range=0.05,
+#                     height_shift_range=0.05,
+#                     shear_range=0.05,
+#                     zoom_range=0.05,
+#                     horizontal_flip=True,
+#                     fill_mode='nearest')
+data_gen_args = dict()
 with open(log_filename, "a") as log_file:
     log_file.write("Augmentation args: "+ str(data_gen_args) + "\n")
 
@@ -129,56 +140,129 @@ if not tune_flag:
 with open(log_filename, "a") as log_file:
     log_file.write("Model path: "+ str(model_path) + "\n")
 
-model = unet_light(pretrained_weights = model_path, input_size = (image_height, image_width,3),
-                   learning_rate = learning_rate, n_classes=num_class)
-
-stringlist = []
-model.summary(print_fn=lambda x: stringlist.append(x))
-short_model_summary = "\n".join(stringlist)
 
 
+if is_export:
+    '''import tensorflow as tf
+    from tensorflow.tools.graph_transforms import TransformGraph
+    from tensorflow.python.framework import graph_util
+    from tensorflow.python.framework import graph_io
+    from keras import backend as K
 
-with open(log_filename, "a") as log_file:
-    log_file.write('\nModel summary:\n')
-    log_file.write(short_model_summary)
-    log_file.write('\nOptimizer:' +str(model.optimizer)+' Learning rate: '+str(learning_rate)+'\n')
-    log_file.write('Loss:' + str(model.loss) + '\n')
-    log_file.write('Metrics:' + str(model.metrics) + '\n')
-    log_file.write('Image_Size: ' + str(image_width) + ' x '+str(image_height) + '\n')
-    log_file.write('Batch_Size: ' + str(batch_size) + '\n')
-    log_file.write('\nTraining process:\n')
-    log_file.write('\nEpoch no, train dice, train loss, val dice, val loss\n')
-if train_flag:
-    if num_class == 1:
-        model_checkpoint = ModelCheckpoint(current_dir+'/models/unet'+timestr+
-                                           '.{epoch:02d}-tloss-{loss:.4f}-tdice-{dice_coef:.4f}-vdice-{val_dice_coef:.4f}.hdf5',
-                                           monitor='loss', verbose=1, save_best_only=True, save_weights_only = True)
-    else:
-        model_checkpoint = ModelCheckpoint(current_dir + '/models/unet' + timestr +
-                                           '.{epoch:02d}-tloss-{loss:.4f}-tdice-{dice_coef_multilabel:.4f}-vdice-{val_dice_coef_multilabel:.4f}.hdf5',
-                                           monitor='loss', verbose=1, save_best_only=True, save_weights_only=True)
-    callbacks = [model_checkpoint, callbacks.CSVLogger(log_filename, separator=',', append=True)]
+    # Get keras model and save
+    model_keras = model.keras_model
+    # All new operations will be in test mode from now on.
+    K.set_learning_phase(0)
+    sess = K.get_session()'''
 
-    start_time = time.time()
 
-    model.fit_generator(trainGene,steps_per_epoch=train_steps,epochs=n_epochs,validation_data=valGene, validation_steps=test_sample_len, callbacks=callbacks)
 
-    end_time = time.time()
-    duration = end_time - start_time
-    with open(log_filename, "a") as log_file:
-        log_file.write("Training time, sec: "+ str(duration) + "\n")
+    import tensorflow as tf
+    from tensorflow.python.framework import graph_io
+    from tensorflow.keras.models import load_model
+
+    #tf.keras.backend.clear_session()
+
+    save_pb_dir = 'models'
+    model_fname = 'models/keras_model.h5'
+
+
+    def freeze_graph(graph, session, output, save_pb_dir='.', save_pb_name='frozen_model.pb', save_pb_as_text=False):
+        with graph.as_default():
+            graphdef_inf = tf.graph_util.remove_training_nodes(graph.as_graph_def())
+            graphdef_frozen = tf.graph_util.convert_variables_to_constants(session, graphdef_inf, output)
+            graph_io.write_graph(graphdef_frozen, save_pb_dir, save_pb_name, as_text=save_pb_as_text)
+            return graphdef_frozen
+
+
+    # This line must be executed before loading Keras model.
+    tf.keras.backend.set_learning_phase(0)
+
+    model = unet_light_ct(pretrained_weights=model_path, input_size=(image_height, image_width, 3),
+                       learning_rate=learning_rate, n_classes=num_class, no_compile = True)
+    model.save("models/keras_model.h5")
+    model = load_model(model_fname)
+
+
+    session = tf.keras.backend.get_session()
+    #init = tf.global_variables_initializer()
+    #session.run(init)
+
+
+    input_names = [t.op.name for t in model.inputs]
+    output_names = [t.op.name for t in model.outputs]
+
+    # Prints input and output nodes names, take notes of them.
+    print(input_names, output_names)
+
+    frozen_graph = freeze_graph(session.graph, session, [out.op.name for out in model.outputs], save_pb_dir=save_pb_dir, save_pb_name='frozen_model_ct2.pb')
+
+    #import tensorflow.contrib.tensorrt as trt
+
+    # from tensorflow.python.compiler.tensorrt import trt_convert as trt
+    #
+    # trt_graph = trt.create_inference_graph(
+    #     input_graph_def=frozen_graph,
+    #     outputs=output_names,
+    #     max_batch_size=1,
+    #     max_workspace_size_bytes=1 << 25,
+    #     precision_mode='FP16',
+    #     minimum_segment_size=3
+    # )
+    #
+    # graph_io.write_graph(trt_graph, "models/",
+    #                      "unet_trt_graph.pb", as_text=False)
+
 else:
-    start_time = time.time()
-    results = model.predict_generator(testGene,test_sample_len,verbose=1)
-    end_time = time.time()
-    duration = end_time - start_time
-    with open(log_filename, "a") as log_file:
-        log_file.write("Testing time, sec: " + str(duration) + "\n")
+    model = unet_light_ct(pretrained_weights=model_path, input_size=(image_height, image_width, 3),
+                       learning_rate=learning_rate, n_classes=num_class)
+    stringlist = []
+    model.summary(print_fn=lambda x: stringlist.append(x))
+    short_model_summary = "\n".join(stringlist)
 
-    if num_class == 1:
-        os.makedirs(current_dir + "/dataset/results", exist_ok=True)
-        saveResult(current_dir+"/dataset/results",results)
+
+
+    with open(log_filename, "a") as log_file:
+        log_file.write('\nModel summary:\n')
+        log_file.write(short_model_summary)
+        log_file.write('\nOptimizer:' +str(model.optimizer)+' Learning rate: '+str(learning_rate)+'\n')
+        log_file.write('Loss:' + str(model.loss) + '\n')
+        log_file.write('Metrics:' + str(model.metrics) + '\n')
+        log_file.write('Image_Size: ' + str(image_width) + ' x '+str(image_height) + '\n')
+        log_file.write('Batch_Size: ' + str(batch_size) + '\n')
+        log_file.write('\nTraining process:\n')
+        log_file.write('\nEpoch no, train dice, train loss, val dice, val loss\n')
+    if train_flag:
+        if num_class == 1:
+            model_checkpoint = ModelCheckpoint(current_dir+'/models/unet'+timestr+
+                                               '.{epoch:02d}-tloss-{loss:.4f}-tdice-{dice_coef:.4f}-vdice-{val_dice_coef:.4f}.hdf5',
+                                               monitor='loss', verbose=1, save_best_only=True, save_weights_only = True)
+        else:
+            model_checkpoint = ModelCheckpoint(current_dir + '/models/unet' + timestr +
+                                               '.{epoch:02d}-tloss-{loss:.4f}-tdice-{dice_coef_multilabel:.4f}-vdice-{val_dice_coef_multilabel:.4f}.hdf5',
+                                               monitor='loss', verbose=1, save_best_only=True, save_weights_only=True)
+        callbacks = [model_checkpoint, callbacks.CSVLogger(log_filename, separator=',', append=True)]
+
+        start_time = time.time()
+
+        model.fit_generator(trainGene,steps_per_epoch=train_steps,epochs=n_epochs,validation_data=valGene, validation_steps=test_sample_len, callbacks=callbacks)
+
+        end_time = time.time()
+        duration = end_time - start_time
+        with open(log_filename, "a") as log_file:
+            log_file.write("Training time, sec: "+ str(duration) + "\n")
     else:
-        os.makedirs(current_dir + "/dataset/results_multiclass_f", exist_ok=True)
-        saveResult(current_dir + "/dataset/results_multiclass_f", results, flag_multi_class=True,
-                   label_list=label_list, color_mask_dict=color_mask_dict)
+        start_time = time.time()
+        results = model.predict_generator(testGene,test_sample_len,verbose=1)
+        end_time = time.time()
+        duration = end_time - start_time
+        with open(log_filename, "a") as log_file:
+            log_file.write("Testing time, sec: " + str(duration) + "\n")
+
+        if num_class == 1:
+            os.makedirs(current_dir + "/dataset/results", exist_ok=True)
+            saveResult(current_dir+"/dataset/results",results)
+        else:
+            os.makedirs(result_path, exist_ok=True)
+            saveResult(result_path, results, flag_multi_class=True,
+                       label_list=label_list, color_mask_dict=color_mask_dict)
