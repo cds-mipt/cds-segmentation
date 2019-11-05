@@ -7,22 +7,6 @@ import skimage.io as io
 import skimage.transform as trans
 import cv2
 
-Sky = [128,128,128]
-Building = [128,0,0]
-Pole = [192,192,128]
-Road = [128,64,128]
-Pavement = [60,40,222]
-Tree = [128,128,0]
-SignSymbol = [192,128,128]
-Fence = [64,64,128]
-Car = [64,0,128]
-Pedestrian = [64,64,0]
-Bicyclist = [0,128,192]
-Unlabelled = [0,0,0]
-
-COLOR_DICT = np.array([Sky, Building, Pole, Road, Pavement,
-                          Tree, SignSymbol, Fence, Car, Pedestrian, Bicyclist, Unlabelled])
-
 
 def convert_str_to_rgb(str_value):
     return (int(str_value[4:6], 16), int(str_value[2:4], 16), int(str_value[0:2], 16)) #in bgr format
@@ -30,16 +14,28 @@ def convert_str_to_rgb(str_value):
 def adjustData(img,mask,flag_multi_class,num_class,label_list=None,color_mask_dict=None):
     if(flag_multi_class):
         img = img / 255
+        #cv2.imwrite('D:/Projects/nkbvs_segmentation/dataset/per_class/0_mask.png', mask[0] * 255)
         #mask = mask[:,:,:,0] if(len(mask.shape) == 4) else mask[:,:,0]
         new_mask = np.zeros((mask.shape[0], mask.shape[1], mask.shape[2], num_class))
         for i in range(num_class):
             label_color = convert_str_to_rgb(color_mask_dict[label_list[i]])
-            min_color = (max(label_color[0] - 5,0), max(label_color[1] - 5,0), max(label_color[2] - 5,0))
-            max_color = (min(label_color[0] + 5,255), min(label_color[1] + 5,255), min(label_color[2] + 5,255))
+            # min_color = (max(label_color[0] - 5,0), max(label_color[1] - 5,0), max(label_color[2] - 5,0))
+            # max_color = (min(label_color[0] + 5,255), min(label_color[1] + 5,255), min(label_color[2] + 5,255))
+            min_color = (label_color[0] - 5, label_color[1] - 5, label_color[2] - 5)
+            max_color = (label_color[0] + 5, label_color[1] + 5, label_color[2] + 5)
             new_mask[0, :, :, i] = cv2.inRange(mask[0], min_color, max_color)
+            #cv2.imwrite('D:/Projects/nkbvs_segmentation/dataset/per_class/' + str(i) + '.png', new_mask[0, :, :, i])
+            #max_val = np.amax(new_mask[0, :, :, i])
             #new_mask[mask == i,i] = 1
 
         #new_mask = np.reshape(new_mask,(new_mask.shape[0],new_mask.shape[1]*new_mask.shape[2],new_mask.shape[3])) if flag_multi_class else np.reshape(new_mask,(new_mask.shape[0]*new_mask.shape[1],new_mask.shape[2]))
+
+        # cv2.imwrite('D:/Projects/nkbvs_segmentation/dataset/per_class/0_src.png', img[0]*255)
+        # cv2.imwrite('D:/Projects/nkbvs_segmentation/dataset/per_class/0_mask.png', mask[0])
+        # cv2.imwrite('D:/Projects/nkbvs_segmentation/dataset/per_class/0_1-3.png', new_mask[0, :, :, 0:3])
+        # cv2.imwrite('D:/Projects/nkbvs_segmentation/dataset/per_class/0_4-6.png', new_mask[0, :, :, 3:6])
+        # cv2.imwrite('D:/Projects/nkbvs_segmentation/dataset/per_class/0_6-9.png', new_mask[0, :, :, 6:9])
+        # cv2.imwrite('D:/Projects/nkbvs_segmentation/dataset/per_class/0_9.png', new_mask[0, :, :, 9])
         mask = new_mask
         mask = mask / 255
     elif(np.max(img) > 1):
@@ -116,14 +112,17 @@ def geneTrainNpy(image_path,mask_path,flag_multi_class = False,num_class = 2,ima
     return image_arr,mask_arr
 
 
-def labelVisualize(label_list, color_mask_dict, img):
+def labelVisualize(label_list, color_mask_dict, img, save_path, id_img):
     num_class = len(label_list)
     #img = img[:,:,0] if len(img.shape) == 3 else img
     img_out = np.zeros((img.shape[0], img.shape[1], 3), dtype=np.uint8)
     for i in range(num_class):
         idx = num_class-1-i
+        #os.makedirs(save_path + '/' + str(idx), exist_ok=True)
         label_color = convert_str_to_rgb(color_mask_dict[label_list[idx]])
-        mask = img[:,:,idx]
+        mask = img[:,:,idx]/np.max(img[:,:,idx])
+
+        #cv2.imwrite(save_path+'/'+str(idx)+'/'+str(id_img)+'.png', mask*255)
         img_out[mask > 0.5] = np.array(label_color)
         #mask[mask <= 0.5] = (0,0,0)
         #img_out[img == i,:] = color_dict[i]
@@ -132,6 +131,6 @@ def labelVisualize(label_list, color_mask_dict, img):
 
 def saveResult(save_path,npyfile,flag_multi_class = False,label_list=None,color_mask_dict=None):
     for i,item in enumerate(npyfile):
-        img = labelVisualize(label_list,color_mask_dict, item) if flag_multi_class else item[:,:,0]
-        io.imsave(os.path.join(save_path,"%d_predict.png"%i),img)
+        img = labelVisualize(label_list,color_mask_dict, item,save_path, i) if flag_multi_class else item[:,:,0]
+        io.imsave(os.path.join(save_path,"%04d_predict.png"%i),img)
 
