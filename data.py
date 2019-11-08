@@ -6,6 +6,7 @@ import glob
 import skimage.io as io
 import skimage.transform as trans
 import cv2
+import time
 
 
 def convert_str_to_rgb(str_value):
@@ -87,11 +88,17 @@ def trainGenerator(batch_size,train_path,image_folder,mask_folder,aug_dict,image
 
 def testGenerator(test_path,num_image = 30,target_size = (256,256),flag_multi_class = False,as_gray = True):
     for filename in sorted(os.listdir(test_path)):
-        img = io.imread(os.path.join(test_path,filename),as_gray = False)
+        start_time = time.time()
+        img = io.imread(os.path.join(test_path, filename), as_gray=False)
         img = img / 255
-        img = trans.resize(img,target_size)
-        #img = np.reshape(img,img.shape+(1,)) if (not flag_multi_class) else img
-        img = np.reshape(img,(1,)+img.shape)
+        img = cv2.resize(img, (target_size[1], target_size[0]))
+        # img = trans.resize(img,target_size)
+        # img = np.reshape(img,img.shape+(1,)) if (not flag_multi_class) else img
+        img = np.reshape(img, (1,) + img.shape)
+        end_time = time.time()
+        duration = end_time - start_time
+        with open('logs/timeread.txt', "a") as log_file:
+            log_file.write("Imread, s: " + str(duration) + "\n")
         yield img
 
 
@@ -118,6 +125,10 @@ def labelVisualize(label_list, color_mask_dict, img, save_path, id_img):
     img_out = np.zeros((img.shape[0], img.shape[1], 3), dtype=np.uint8)
     for i in range(num_class):
         idx = num_class-1-i
+        # if idx == 7:
+        #     continue
+        # if idx == 8:
+        #     idx = 7
         #os.makedirs(save_path + '/' + str(idx), exist_ok=True)
         label_color = convert_str_to_rgb(color_mask_dict[label_list[idx]])
         mask = img[:,:,idx]/np.max(img[:,:,idx])

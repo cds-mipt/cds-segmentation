@@ -37,7 +37,7 @@ project_dir = os.path.dirname(current_dir)
 
 train_path = current_dir+'/dataset/augmented_multiclass_dataset/train'
 val_path = current_dir+'/dataset/augmented_multiclass_dataset/test'
-result_path = current_dir+"/dataset/results_multiclass_ct10_test_sample_Dice"
+result_path = current_dir+"/dataset/results_multiclass_ct10_test_sample_Dice_1"
 
 # train_path = current_dir+'/dataset/augmented_markup_dataset/train'
 # val_path = current_dir+'/dataset/augmented_markup_dataset/test'
@@ -134,10 +134,10 @@ valGene = trainGenerator(batch_size=1,
 testGene = testGenerator(test_path=test_path,
                          num_image = test_sample_len,
                          target_size = (image_height, image_width))
-
-if not tune_flag:
-    if train_flag:
-        model_path = None
+if not is_export:
+    if not tune_flag:
+        if train_flag:
+            model_path = None
 
 with open(log_filename, "a") as log_file:
     log_file.write("Model path: "+ str(model_path) + "\n")
@@ -166,7 +166,7 @@ if is_export:
     #tf.keras.backend.clear_session()
 
     save_pb_dir = 'models'
-    model_fname = 'models/keras_model.h5'
+    model_fname = "models/keras_model_UnetMCT.h5"
 
 
     def freeze_graph(graph, session, output, save_pb_dir='.', save_pb_name='frozen_model.pb', save_pb_as_text=False):
@@ -182,7 +182,7 @@ if is_export:
 
     model = unet_light_ct_tv(pretrained_weights=model_path, input_size=(image_height, image_width, 3),
                        learning_rate=learning_rate, n_classes=num_class, no_compile = True)
-    model.save("models/keras_model.h5")
+    model.save(model_fname)
     model = load_model(model_fname)
 
 
@@ -197,7 +197,7 @@ if is_export:
     # Prints input and output nodes names, take notes of them.
     print(input_names, output_names)
 
-    frozen_graph = freeze_graph(session.graph, session, [out.op.name for out in model.outputs], save_pb_dir=save_pb_dir, save_pb_name='frozen_model_ct2.pb')
+    frozen_graph = freeze_graph(session.graph, session, [out.op.name for out in model.outputs], save_pb_dir=save_pb_dir, save_pb_name='frozen_model_ct_unetmct.pb')
 
     #import tensorflow.contrib.tensorrt as trt
 
