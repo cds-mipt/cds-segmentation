@@ -11,16 +11,16 @@ from BackgroundParser import SourcePreparation
 
 train_flag = False
 tune_flag = False
-is_export = False
+is_export = True
 
 image_width = 640
 image_height = 384
 
 
-n_epochs = 20
+n_epochs = 30
 batch_size = 1
 train_sample_len = 1965
-test_sample_len = 840
+test_sample_len = 500
 #test_sample_len = 2
 train_steps = train_sample_len//batch_size
 test_steps = test_sample_len//batch_size
@@ -37,7 +37,7 @@ project_dir = os.path.dirname(current_dir)
 
 train_path = current_dir+'/dataset/augmented_multiclass_dataset/train'
 val_path = current_dir+'/dataset/augmented_multiclass_dataset/test'
-result_path = current_dir+"/dataset/results_multiclass_ct10_test_sample_Dice_1"
+result_path = current_dir+"/dataset/results_multiclass_ct10_test_sample_Dice_softmax_converted-1000"
 
 # train_path = current_dir+'/dataset/augmented_markup_dataset/train'
 # val_path = current_dir+'/dataset/augmented_markup_dataset/test'
@@ -46,9 +46,9 @@ result_path = current_dir+"/dataset/results_multiclass_ct10_test_sample_Dice_1"
 #test_path = current_dir+'/dataset/augmented_multiclass_dataset/test/two_images'
 
 #test_path = "D:/Projects/nkbvs_segmentation/dataset/augmented_multiclass_dataset/train/check"
-#test_path = "D:/Datasets/NKBVS/mfti_data/2019-01-31-15-53-26_kia_velo_gps_time/stereo/left/image_raw/converted-1688"
+test_path = "D:/Datasets/NKBVS/mfti_data/2019-01-31-15-53-26_kia_velo_gps_time/stereo/left/image_raw/converted-1000"
 #test_path = "D:/Projects/nkbvs_segmentation/dataset/resized_source"
-test_path = "D:/Projects/nkbvs_segmentation/dataset/augmented_multiclass_dataset/test/color"
+#test_path = "D:/Projects/nkbvs_segmentation/dataset/augmented_multiclass_dataset/test/color"
 #test_path = "C:/Data/resized_source"
 
 #model_path = current_dir+'/models/unet2019-11-02-09-22-38.21-tloss-0.1277-tdice-0.8723-vdice-0.7350.hdf5' #512
@@ -57,7 +57,9 @@ test_path = "D:/Projects/nkbvs_segmentation/dataset/augmented_multiclass_dataset
 #model_path = current_dir+'/models/unet2019-11-03-13-53-42.06-tloss-0.4144-tdice-0.5856-vdice-0.4698.hdf5'
 
 #model_path = current_dir+'/models/unet2019-11-03-20-53-29.04-tloss-0.2886-tdice-0.7114-vdice-0.6846.hdf5'
-model_path = current_dir+'/models/unet2019-11-04-02-14-04.13-tloss-0.1455-tdice-0.8545-vdice-0.6879.hdf5'
+#model_path = current_dir+'/models/unet2019-11-04-02-14-04.13-tloss-0.1455-tdice-0.8545-vdice-0.6879.hdf5'
+#model_path = current_dir+'/models/unet2019-11-08-23-22-39.14-tloss-0.1059-tdice-0.8941-vdice-0.6650.hdf5'
+model_path = current_dir+'/models/unet2019-11-09-11-40-15.19-tloss-0.0211-tdice-0.9789-vdice-0.6992.hdf5'
 
 timestr = time.strftime("%Y-%m-%d-%H-%M-%S")
 log_filename = current_dir+'/logs/log-unet-'+ timestr +'.txt'
@@ -166,7 +168,7 @@ if is_export:
     #tf.keras.backend.clear_session()
 
     save_pb_dir = 'models'
-    model_fname = "models/keras_model_UnetMCT.h5"
+    model_fname = "models/keras_model_UnetMCT_softmax.h5"
 
 
     def freeze_graph(graph, session, output, save_pb_dir='.', save_pb_name='frozen_model.pb', save_pb_as_text=False):
@@ -180,8 +182,11 @@ if is_export:
     # This line must be executed before loading Keras model.
     tf.keras.backend.set_learning_phase(0)
 
-    model = unet_light_ct_tv(pretrained_weights=model_path, input_size=(image_height, image_width, 3),
-                       learning_rate=learning_rate, n_classes=num_class, no_compile = True)
+    # model = unet_light_ct_tv(pretrained_weights=model_path, input_size=(image_height, image_width, 3),
+    #     #                    learning_rate=learning_rate, n_classes=num_class, no_compile = True)
+    model = unet_light_ct_tv_softmax(pretrained_weights=model_path, input_size=(image_height, image_width, 3),
+                        learning_rate=learning_rate, n_classes=num_class, no_compile = True)
+
     model.save(model_fname)
     model = load_model(model_fname)
 
@@ -197,7 +202,8 @@ if is_export:
     # Prints input and output nodes names, take notes of them.
     print(input_names, output_names)
 
-    frozen_graph = freeze_graph(session.graph, session, [out.op.name for out in model.outputs], save_pb_dir=save_pb_dir, save_pb_name='frozen_model_ct_unetmct.pb')
+    frozen_graph = freeze_graph(session.graph, session, [out.op.name for out in model.outputs],
+                                save_pb_dir=save_pb_dir, save_pb_name='frozen_model_ct_unetmct_softmax.pb')
 
     #import tensorflow.contrib.tensorrt as trt
 
@@ -216,8 +222,11 @@ if is_export:
     #                      "unet_trt_graph.pb", as_text=False)
 
 else:
-    model = unet_light_ct_tv(pretrained_weights=model_path, input_size=(image_height, image_width, 3),
-                       learning_rate=learning_rate, n_classes=num_class)
+    #model = unet_light_ct_tv(pretrained_weights=model_path, input_size=(image_height, image_width, 3),
+    # learning_rate=learning_rate, n_classes=num_class)
+    model = unet_light_ct_tv_softmax(pretrained_weights=model_path, input_size=(image_height, image_width, 3),
+                                     learning_rate = learning_rate, n_classes = num_class)
+
     stringlist = []
     model.summary(print_fn=lambda x: stringlist.append(x))
     short_model_summary = "\n".join(stringlist)

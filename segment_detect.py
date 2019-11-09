@@ -8,8 +8,13 @@ import cv2
 
 
 current_dir = os.getcwd()
-model_path = current_dir+'/models/unet2019-11-04-02-14-04.13-tloss-0.1455-tdice-0.8545-vdice-0.6879.hdf5'
-result_path = current_dir+"/dataset/results_2019-01-31-15-53-26_kia_velo_gps_time_no_argmax"
+is_softmax = True
+if is_softmax:
+    model_path = current_dir + '/models/unet2019-11-09-11-40-15.19-tloss-0.0211-tdice-0.9789-vdice-0.6992.hdf5'
+else:
+    model_path = current_dir+'/models/unet2019-11-04-02-14-04.13-tloss-0.1455-tdice-0.8545-vdice-0.6879.hdf5'
+
+result_path = current_dir+"/dataset/results_2019-01-31-15-53-26_kia_velo_gps_time_with_dense_softmax"
 #test_path = "D:/Projects/nkbvs_segmentation/dataset/augmented_multiclass_dataset/test/color"
 test_path = "D:/Datasets/NKBVS/mfti_data/2019-01-31-15-53-26_kia_velo_gps_time/stereo/left/image_raw/converted"
 is_armax = True
@@ -37,13 +42,18 @@ label_list = source_preparator.label_list
 color_mask_dict = source_preparator.color_mask_dict
 num_class = len(label_list)
 
-model = unet_light_ct_tv(pretrained_weights=model_path, input_size=(image_height, image_width, 3),
-                       n_classes=num_class)
+if is_softmax:
+    model = unet_light_ct_tv_softmax(pretrained_weights=model_path, input_size=(image_height, image_width, 3),
+                             n_classes=num_class)
+else:
+    model = unet_light_ct_tv(pretrained_weights=model_path, input_size=(image_height, image_width, 3),
+                           n_classes=num_class)
 stringlist = []
 model.summary(print_fn=lambda x: stringlist.append(x))
 short_model_summary = "\n".join(stringlist)
 
-model_t_l_classify = load_model('models/Best_ResNetM_50_epochs_TrafficLights_without_Dense.hdf5')
+#model_t_l_classify = load_model('models/Best_ResNetM_50_epochs_TrafficLights_without_Dense.hdf5')
+model_t_l_classify = load_model('models/Best_ResNetM_50_epochs_TrafficLights.hdf5')
 
 
 
@@ -106,7 +116,7 @@ for filename in sorted(os.listdir(test_path)):
             mask[mask > 0.5] = 255
             mask[mask <= 0.5] = 0
 
-        src_img[mask == 255] *= np.array(label_color)/255
+        #src_img[mask == 255] *= np.array(label_color)/255
         ret, labels = cv2.connectedComponents(mask.astype(dtype=np.uint8))
         area_threshold = 30
         for region_id in range(ret-1):
@@ -119,8 +129,7 @@ for filename in sorted(os.listdir(test_path)):
                 bboxes.append({"label": label,
                                "top_left_corner": top_left_corner,
                                "bottom_right_corner": bottom_right_corner})
-                cv2.rectangle(src_img, (top_left_corner[1], top_left_corner[0]),
-                              (bottom_right_corner[1], bottom_right_corner[0]), label_color, 1)
+
                 if is_save_crop:
                     crop_to_save = src_img_to_crop[
                                    int(top_left_corner[0]*scale_coef[0]):int(bottom_right_corner[0]*scale_coef[0]),
@@ -129,9 +138,11 @@ for filename in sorted(os.listdir(test_path)):
                     input_img = preprocess_image(crop_to_save.astype(dtype=np.uint8), target_size=(70, 70))
                     class_result = np.argmax(model_t_l_classify.predict(input_img, verbose=1))
                     class_text = class_dict[str(class_result)]
-
-                    cv2.putText(src_img, class_text, (top_left_corner[1], top_left_corner[0]-15),
-                                cv2.FONT_HERSHEY_SIMPLEX, 0.8, label_color, 1, cv2.LINE_AA)
+                    if not (class_text == 'no' or class_text == 'off'):
+                        cv2.rectangle(src_img, (top_left_corner[1], top_left_corner[0]),
+                                      (bottom_right_corner[1], bottom_right_corner[0]), label_color, 1)
+                        cv2.putText(src_img, class_text, (top_left_corner[1], top_left_corner[0]-10),
+                                    cv2.FONT_HERSHEY_SIMPLEX, 0.8, label_color, 1, cv2.LINE_AA)
 
                     os.makedirs(result_path + "/crop/"+class_text, exist_ok=True)
                     crop_to_save = cv2.cvtColor(crop_to_save.astype(dtype=np.uint8), cv2.COLOR_RGB2BGR)

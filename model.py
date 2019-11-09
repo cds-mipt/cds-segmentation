@@ -253,4 +253,49 @@ def unet_light_ct_tv(pretrained_weights = None,input_size = (256,256,1),learning
 
     return model
 
+def unet_light_ct_tv_softmax(pretrained_weights = None,input_size = (256,256,1),learning_rate = 1e-4, n_classes = 1, no_compile = False):
+    inputs = Input(input_size)
+    conv1 = Conv2D(32, 5, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(inputs)
+    conv1 = Conv2D(32, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(conv1)
+    conv11 = Conv2D(32, 3, activation='relu', dilation_rate=2, padding='same', kernel_initializer='he_normal')(conv1)
+    pool1 = MaxPooling2D(pool_size=(2, 2))(conv11)
+    conv2 = Conv2D(32, 3, activation = 'relu', dilation_rate=2,  padding = 'same', kernel_initializer = 'he_normal')(pool1)
+    conv21 = Conv2D(32, 3, activation = 'relu', dilation_rate=2, padding = 'same', kernel_initializer = 'he_normal')(conv2)
+    conv22 = Conv2D(32, 3, activation='relu', dilation_rate=2, padding='same', kernel_initializer='he_normal')(conv21)
+    pool2 = MaxPooling2D(pool_size=(2, 2))(conv22)
+    conv3 = Conv2D(128, 3, activation = 'relu', dilation_rate=2,  padding = 'same', kernel_initializer = 'he_normal')(pool2)
+    conv3 = Conv2D(128, 3, activation = 'relu', dilation_rate=2, padding = 'same', kernel_initializer = 'he_normal')(conv3)
+    drop3 = Dropout(0.5)(conv3)
+
+    #up8 = Conv2D(64, 2, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(UpSampling2D(size = (2,2))(drop3))
+    #Jason Brownlee. How to use the UpSampling2D and Conv2DTranspose Layers in Keras. 2019 https://machinelearningmastery.com/upsampling-and-transpose-convolution-layers-for-generative-adversarial-networks/
+    #TensorRT Support Matrix. TensorRT 5.1.5. https://docs.nvidia.com/deeplearning/sdk/tensorrt-archived/tensorrt-515/tensorrt-support-matrix/index.html
+    up8 = Conv2DTranspose(64, (2, 2), strides=(2, 2))(drop3)
+    merge8 = concatenate([conv22,up8], axis = 3)
+    conv8 = Conv2D(64, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(merge8)
+    conv8 = Conv2D(64, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(conv8)
+
+    #up9 = Conv2D(64, 2, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(UpSampling2D(size = (2,2))(conv8))
+    up9 = Conv2DTranspose(64, (2, 2), strides=(2, 2))(conv8)
+    merge9 = concatenate([conv11,up9], axis = 3)
+    conv9 = Conv2D(32, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(merge9)
+    conv9 = Conv2D(32, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(conv9)
+
+    conv10 = Conv2D(n_classes, 1, activation = 'softmax')(conv9)
+
+    model = Model(input = inputs, output = conv10)
+
+    if no_compile == False:
+        if n_classes == 1:
+            model.compile(optimizer=Adam(lr=learning_rate), loss=dice_coef_loss, metrics=[dice_coef])
+        else:
+            model.compile(optimizer=Adam(lr=learning_rate), loss=dice_coef_multilabel_loss,
+                          metrics=[dice_coef_multilabel,
+                                   dice_0,dice_1,dice_2,dice_3,dice_4,dice_5,dice_6,dice_7,dice_8,dice_9])
+
+    if(pretrained_weights):
+    	model.load_weights(pretrained_weights)
+
+    return model
+
 
