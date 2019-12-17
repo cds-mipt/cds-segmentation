@@ -3,13 +3,11 @@ from Cvat import CvatDataset
 import os
 import cv2
 import numpy as np
-from skimage.measure import label, regionprops
+
 import imgaug.augmenters as iaa
-from shapely.geometry import Polygon
-import shapely
-
+#class for work with cvat-labeling file and for generation of instance and semantic segmentation mask
 class SourcePreparation:
-
+    # object labels form cvat file with appropriate segmentation catergories
     lbl_dict = {
         "1.22": "traffic_sign",
         "1.23": "traffic_sign",
@@ -49,7 +47,7 @@ class SourcePreparation:
         "road": "road",
         "sky": "sky"
     }
-
+    #colors for segmentation categories
     color_mask_dict = {
         "traffic_sign": "00ffff",
         "animal": "ccff99",  # -
@@ -69,28 +67,25 @@ class SourcePreparation:
         "truck": "ff8000",
         "borders": "b496c8",  # not in audi
         "road": "ff00ff",
-        "sky": "87ceff"
+        "sky": "87ceff",
+        "background": "000000"
     }
 
-    # label_list = ["traffic_sign",
-    #               "car","truck",
-    #               "person",
-    #               "solid", "double_solid", "intermittent", "stop_lane",
-    #               "traffic_light",
-    #               "borders",
-    #               "road",
-    #               "sky"]
-
-    #label_list = ["solid", "intermittent"]
-
+    # object list for training
     label_list = ["traffic_sign",
                   "car","truck",
                   "person",
-                  "solid", "intermittent",
+                  "solid", "double_solid", "intermittent", "stop_lane",
                   "traffic_light",
                   "borders",
                   "road",
-                  "sky"]
+                  "sky",
+                  "background"]
+    #object list for visualization during testing
+    label_list_vis = ["solid", "double_solid", "intermittent", "stop_lane"]
+    #object indexes for visualization from label_list
+    label_list_idxs = [4, 5, 6, 7]
+
 
     def __init__(self):
 
@@ -207,6 +202,7 @@ class SourcePreparation:
                                          (obj_box['xtl'] * sf_width, obj_box['ybr'] * sf_height)]], 'int32')
                 mask = cv2.fillPoly(mask, roi_corners, obj_color)
         return mask
+
     def generate_augmented_dataset(self, source_path, mask_path, target_path, N_per_image=15, test_percent=0.3):
         os.makedirs(target_path + '/train', exist_ok=True)
         os.makedirs(target_path + '/test', exist_ok=True)
@@ -244,122 +240,6 @@ class SourcePreparation:
                 cv2.imwrite(target_path+'/'+folder_name+'/mask/' +str(count)+'_'+file_name_list[idx], mask_aug[idx],[cv2.IMWRITE_PNG_COMPRESSION, 0])
                 print(str(count)+':' + str(idx))
 
-    # def pol_to_dots(self, poly):
-    #     l = list()
-    #     x, y = poly.exterior.coords.xy
-    #     coord = [x, y]
-    #     for i in range(len(coord[0])):
-    #         xy = [coord[0][i], coord[1][i]]
-    #         dots = tuple(xy)
-    #         l.append(dots)
-    #     return l
-    #
-    # def checked(self, pol, width, height):
-    #     pol = Polygon(pol)
-    #     p1 = Polygon([(0, 0), (0, height), (width, height), (width, 0)])
-    #     p1 = p1.intersection(pol)
-    #     if type(p1) == shapely.geometry.multipolygon.MultiPolygon:
-    #         return 0
-    #     if p1.is_empty == True:
-    #         return 0
-    #     else:
-    #         return self.pol_to_dots(p1)
-    #
-    # def points_please(self, input_file):
-    #     ds = CvatDataset()
-    #     ds.load(input_file)
-    #     polygons = list()
-    #     all_polygons = list()
-    #     for image_id in ds.get_image_ids():
-    #         for polygon in ds.get_polygons(image_id):
-    #             label = label_image(polygon["label"].replace("_", "."))
-    #             polygons += [polygon["points"]]
-    #         for i in range(len(polygons)):
-    #             for j in range(len(polygons[i])):
-    #                 polygons[i][j] = tuple(polygons[i][j])
-    #         all_polygons.append(polygons)
-    #         polygons = list()
-    #     return all_polygons
-    #
-    # def augment_polygons(self, s_images, points, image_name, width, height, min_width, min_height, batches):
-    #     full_list = list()
-    #     for i in range(batches):
-    #         width_crop = np.random.randint(min_width, width)
-    #         height_crop = width / height * width_crop
-    #         aug = iaa.Sequential([
-    #             iaa.Affine(rotate=(-10, 10)),
-    #             iaa.CropToFixedSize(width=width_crop, height=height_crop),
-    #             iaa.Fliplr(0.5),
-    #         ])
-    #         aug = aug.to_deterministic()
-    #         batch_aug = aug.augment(
-    #             images=s_images, polygons=points,
-    #             return_batch=True)
-    #
-    #         new_images = batch_aug.images_aug
-    #
-    #         new_images = np.asarray(new_images)
-    #
-    #         for j in range(len(new_images)):
-    #             save_image(new_images[j], "cars", ".jpg", image_name)
-    #             save_image(new_masks[j], "masks", ".bmp", image_name)
-    #             save_image(new_images_l[j], "clear", ".jpg", image_name)
-    #
-    #         new_list = list()
-    #
-    #         new_polygo = batch_aug.polygons_aug
-    #         new_polygo = np.asarray(new_polygo)
-    #
-    #         for p in new_polygo:
-    #             for polygon in p:
-    #                 if checked(polygon) == 0:
-    #                     continue
-    #                 else:
-    #                     new_list.append(checked(polygon))
-    #             full_list.append(new_list)
-    #             new_list = list()
-    #
-    #     return full_list
-    #
-    # def generate_augmented_dataset_instances(self, source_path, mask_path, target_path, N_per_image=15, test_percent=0.3):
-    #     os.makedirs(target_path + '/train', exist_ok=True)
-    #     os.makedirs(target_path + '/test', exist_ok=True)
-    #
-    #     os.makedirs(target_path + '/train/source', exist_ok=True)
-    #     #os.makedirs(target_path + '/train/mask', exist_ok=True)
-    #     os.makedirs(target_path + '/test/source', exist_ok=True)
-    #     #os.makedirs(target_path + '/test/mask', exist_ok=True)
-    #     # Pipeline:
-    #     # (1) Crop images from each side by 0-16px, do not resize the results
-    #     #     images back to the input size. Keep them at the cropped size.
-    #     # (2) Horizontally flip 50% of the images.
-    #     # (3) Affine transformations
-    #     width_crop = np.random.randint(min_width, width)
-    #     height_crop = width / height * width_crop
-    #     seq = iaa.Sequential([
-    #         iaa.Affine(rotate=(-10, 10)),
-    #         iaa.CropToFixedSize(width=width_crop, height=height_crop),
-    #         iaa.Fliplr(0.5),
-    #     ])
-    #     image_list = []
-    #     mask_list = []
-    #     file_name_list = []
-    #     for image_file_name in os.listdir(source_path):
-    #         image_list.append(cv2.imread(os.path.join(source_path, image_file_name)))
-    #         mask_list.append(cv2.imread(os.path.join(mask_path, image_file_name)))
-    #         file_name_list.append(image_file_name)
-    #     for count in range(N_per_image):
-    #         images_aug, mask_aug = seq(images=np.array(image_list,dtype=np.uint8), segmentation_maps=np.array(mask_list,dtype=np.uint8))
-    #         images_aug, points_aug = seq(images=s_images, polygons=points)
-    #         for idx in range(images_aug.shape[0]):
-    #             if idx > images_aug.shape[0] * (1 - test_percent):
-    #                 folder_name = 'test'
-    #             else:
-    #                 folder_name = 'train'
-    #             cv2.imwrite(target_path+'/'+folder_name+'/source/'+str(count)+'_'+file_name_list[idx],images_aug[idx])
-    #             cv2.imwrite(target_path+'/'+folder_name+'/mask/' +str(count)+'_'+file_name_list[idx], mask_aug[idx],[cv2.IMWRITE_PNG_COMPRESSION, 0])
-    #             print(str(count)+':' + str(idx))
-
     def all_resources_preparation(self):
         #path_to_cvat_data = self.path_to_cvat_instance_data
         #target_path = self.background_target_path
@@ -394,18 +274,10 @@ class SourcePreparation:
             image_sizes.append(cvat_data.get_size(image))
             image_names.append(cvat_data.get_name(image))
 
-            # points_list = points[idx]
             image_size = image_sizes[idx]
             image_name = image_names[idx]
             print(image_name)
 
-
-
-            #
-            # # background creation
-            # self.background_alignment(points_list=points_list, image_size=image_size, image_name=image_name)
-
-            # cars cropping
             obj_polygons = polygons[idx]
             sem_polygons = polygons_semantic[idx]
             obj_boxes = boxes[idx]
@@ -423,7 +295,7 @@ class SourcePreparation:
             #                                             target_size=target_size)
             # full_target_path = self.background_target_path+'resized_semantic/'+os.path.basename(image_name)
             # cv2.imwrite(full_target_path, semantic_mask,[cv2.IMWRITE_PNG_COMPRESSION, 0])
-            #
+
             # instance_semantic_mask = self.generate_instance_mask(obj_polygons=obj_polygons, obj_boxes=obj_boxes,
             #                                                      input_mask=semantic_mask, image_size=image_size,
             #                                                      target_size=target_size)
@@ -438,30 +310,25 @@ class SourcePreparation:
             full_target_path = self.background_target_path + 'resized_special_markup/' + os.path.basename(image_name)
             cv2.imwrite(full_target_path, special_mask,[cv2.IMWRITE_PNG_COMPRESSION, 0])
 
-            #self.cars_cropping(car_polygons=car_polygons, image_name=image_name)
-
         print(image_ids)
 
 
 # source_preparator = SourcePreparation()
 
 #source_preparator.all_resources_preparation()
+
 # source_preparator.generate_augmented_dataset(source_path = "D:/Projects/nkbvs_segmentation/dataset/resized_source",
 #                                              mask_path = "D:/Projects/nkbvs_segmentation/dataset/resized_special_bw",
 #                                              target_path = "D:/Projects/nkbvs_segmentation/dataset/augmented_dataset")
+
 # source_preparator.generate_augmented_dataset(source_path = "D:/Projects/nkbvs_segmentation/dataset/resized_source",
 #                                              mask_path = "D:/Projects/nkbvs_segmentation/dataset/resized_instance_semantic",
 #                                              target_path = "D:/Projects/nkbvs_segmentation/dataset/augmented_multiclass_dataset")
+
 # source_preparator.generate_augmented_dataset(source_path = "D:/Projects/nkbvs_segmentation/dataset/resized_source",
 #                                              mask_path = "D:/Projects/nkbvs_segmentation/dataset/resized_special_markup",
 #                                              target_path = "D:/Projects/nkbvs_segmentation/dataset/augmented_markup_dataset")
 
-
-#source_preparator.all_resources_preparation()
-
-
-# source_preparator.maskLabelsToTxt(mask_path='D:/Projects/RAAISummerSchool/data/dataset/test/mask',
-#                                   txt_path='D:/Projects/RAAISummerSchool/data/dataset/test/labels')
 
 
 
