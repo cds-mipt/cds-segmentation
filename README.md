@@ -1,30 +1,40 @@
 # cds-segmentation
 
 
-## Segmentation algorithms
+## Segmentation and auxiliary Python-scripts
 
-unetCarsTrain.py - training and testing of segmentation model in single python-script
+**unetCarsTrain.py** - training and testing of segmentation model in single python-script
 
-BackgroundParser.py - data preparation from file with labeling and color and classes pallete
+**BackgroundParser.py** - data preparation from file with labeling and color and classes pallete
 
-data.py - data generator
+**data.py** - data generator
 
-model.py - different segmentation models
+**model.py** - different segmentation models
 
-segment_detect.py - segmentation and subsequent detection based on clustering and classification
+**segment_detect.py** - segmentation and subsequent detection based on clustering and classification
 
-cvat.py - functions for mask reading from xml cvat labeling
+**cvat.py** - functions for mask reading from xml cvat labeling
 
-video_creator.py - python script for creation of video from two or one image sequences
+**video_creator.py** - python script for creation of video from two or one image sequences
+
+## Folders in the repository:
+
+**logs** - temporary folder for logs
+
+**models** - pretrained models
+
+**notebooks**	- jupyter notebooks for pretrained models testing on nvidia jetson TX2 and Xavier
+
+**two_images** - image examples
 
 
 ## Conversion from keras to tensorflow and then to tensorrt
 
-unetCarsTrain.py include conversion feature from keras to tensorflow .pb model
+unetCarsTrain.py include **conversion feature from keras to tensorflow .pb model**
 
-For conversion from tensorflow to tensorrt model use instruction: https://www.dlology.com/blog/how-to-run-keras-model-on-jetson-nano/
+For **conversion from tensorflow to tensorrt model** use instruction: https://www.dlology.com/blog/how-to-run-keras-model-on-jetson-nano/
 
-Som onput/output tensor names 
+**Some input/output tensor names** 
 
 model with upsampling2D:
 
