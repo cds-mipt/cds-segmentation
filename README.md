@@ -1,5 +1,6 @@
 # cds-segmentation
 
+
 ## Segmentation algorithms
 
 unetCarsTrain.py - training and testing of segmentation model in single python-script
@@ -13,6 +14,8 @@ model.py - different segmentation models
 segment_detect.py - segmentation and subsequent detection based on clustering and classification
 
 cvat.py - functions for mask reading from xml cvat labeling
+
+video_creator.py - python script for creation of video from two or one image sequences
 
 
 ## Conversion from keras to tensorflow and then to tensorrt
