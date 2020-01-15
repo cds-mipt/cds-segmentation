@@ -47,3 +47,15 @@ model with Conv2DTranspose:
 model with Conv2DTranspose + Softmax and added layers:
 
 ['input_1_1'] ['conv2d_13_1/truediv']
+
+## UNetMCT results on winter scene
+
+**Semantic segmentation**
+
+[![Semantic segmentation with UNetMCT](https://img.youtube.com/vi/QC_8gZPQ5u8/0.jpg)](https://www.youtube.com/watch?v=QC_8gZPQ5u8)
+
+**Road markup segmentation**
+
+[![Road markup segmentation with UNetMCT](https://img.youtube.com/vi/J9P-xb_cOAY/0.jpg)](https://www.youtube.com/watch?v=J9P-xb_cOAY)
+
+
