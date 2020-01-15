@@ -15,7 +15,7 @@
 
 **cvat.py** - functions for mask reading from xml cvat labeling
 
-**video_creator.py** - python script for creation of video from two or one image sequences
+**video_creator.py** - python script for creation of video from two or one folders with image sequences
 
 ## Folders in the repository:
 
